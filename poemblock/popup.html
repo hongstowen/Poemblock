@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Poemblock 设置</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <div class="header">
+      <h1>Poemblock</h1>
+      <div class="subtitle">广告替换 · 诗意阅读</div>
+    </div>
+
+    <!-- 全局开关 -->
+    <div class="section">
+      <div class="row">
+        <label class="toggle-label">
+          <span>🔌 插件启用</span>
+          <input type="checkbox" id="enabled" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 内容设置 -->
+    <div class="section">
+      <div class="row">
+        <label>🌐 语言</label>
+        <select id="language">
+          <option value="auto">自动检测</option>
+          <option value="chinese">中文</option>
+          <option value="english">English</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>🎨 主题</label>
+        <select id="theme">
+          <option value="auto">自动</option>
+          <option value="light">浅色</option>
+          <option value="dark">深色</option>
+          <option value="sepia">复古</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>📄 内容模式</label>
+        <select id="contentMode">
+          <option value="poem">仅诗歌</option>
+          <option value="excerpt">仅文摘</option>
+          <option value="mix" selected>混合（随机）</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>📏 最大行数</label>
+        <select id="maxPoemLines">
+          <option value="6">6 行</option>
+          <option value="8">8 行</option>
+          <option value="12" selected>12 行</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>🔤 字体</label>
+        <select id="fontFamily">
+          <option value="auto">自动</option>
+          <option value="serif">衬线</option>
+          <option value="sans-serif">无衬线</option>
+        </select>
+      </div>
+      <div class="row">
+        <label class="toggle-label">
+          <span>▶ 下一首按钮</span>
+          <input type="checkbox" id="showNextButton" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+
+    <!-- 当前网站控制 -->
+    <div class="section">
+      <button id="excludeSite" class="btn-secondary">🚫 排除当前网站</button>
+    </div>
+
+    <!-- 统计数据 -->
+    <div class="section stats">
+      <p>已替换广告: <span id="statsCount">0</span></p>
+      <p>诗歌缓存: <span id="poemCount">0</span> 首</p>
+      <p>文摘缓存: <span id="excerptCount">0</span> 条</p>
+      <p id="excerptStatus" style="font-size: 11px; color: #888; margin-top: 4px;"></p>
+    </div>
+
+    <!-- 底部操作 -->
+    <div class="section" style="padding: 10px 14px;">
+      <button id="refreshBtn" class="btn-secondary">🔄 刷新数据</button>
+    </div>
+
+    <div class="footer">
+      <p>Poemblock v1.1 · 诗意的广告替换</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

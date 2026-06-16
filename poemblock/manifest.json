@@ -1,0 +1,76 @@
+{
+  "manifest_version": 3,
+  "name": "Poemblock",
+  "version": "1.1",
+  "description": "检测网页弹窗广告并替换为优美的诗歌",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "https://v1.jinrishici.com/*",
+    "https://dummyjson.com/*",
+    "https://api.poetrydb.org/*",
+    "https://v1.hitokoto.cn/*",
+    "https://api-soulmate.vercel.app/*",
+    "https://www.litquotes.com/*",
+    "*://*.doubleclick.net/*",
+    "*://*.googlesyndication.com/*",
+    "*://*.googleadservices.com/*",
+    "*://*.google-analytics.com/*",
+    "*://*.googletagmanager.com/*",
+    "*://*.adsystem.com/*",
+    "*://*.adservice.com/*",
+    "*://*.casalemedia.com/*",
+    "*://*.outbrain.com/*",
+    "*://*.taboola.com/*",
+    "*://*.criteo.com/*",
+    "*://*.amazon-adsystem.com/*",
+    "*://*.adnxs.com/*",
+    "*://*.rubiconproject.com/*",
+    "*://*.pubmatic.com/*",
+    "*://*.openx.net/*",
+    "*://*.appnexus.com/*",
+    "*://*.exponential.com/*",
+    "*://*.advertising.com/*",
+    "*://*.scorecardresearch.com/*",
+    "*://*.quantserve.com/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "block_ads",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["汇文明朝体GBKv1.001.ttf", "src/data/poems_chinese.json", "src/data/poems_english.json", "src/data/excerpts.json"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_title": "Poemblock",
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

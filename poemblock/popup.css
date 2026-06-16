@@ -1,0 +1,183 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 340px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #f8f7f4;
+  color: #333;
+}
+
+.popup-container {
+  padding: 16px;
+}
+
+/* ===== Header ===== */
+.header {
+  text-align: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e8e4de;
+}
+
+.header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 2px;
+  letter-spacing: 1px;
+}
+
+/* ===== Sections ===== */
+.section {
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+/* ===== Row settings ===== */
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 7px 0;
+  min-height: 32px;
+}
+
+.row + .row {
+  border-top: 1px solid #f0ece6;
+}
+
+.row label {
+  font-size: 14px;
+  color: #555;
+}
+
+.row select {
+  font-size: 13px;
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fefefe;
+  color: #333;
+  outline: none;
+  cursor: pointer;
+  max-width: 130px;
+}
+
+.row select:focus {
+  border-color: #667eea;
+}
+
+/* ===== Toggle switch ===== */
+.toggle-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  cursor: pointer;
+  user-select: none;
+}
+
+.toggle-label span {
+  font-size: 14px;
+  color: #333;
+}
+
+.toggle-label input[type="checkbox"] {
+  display: none;
+}
+
+.toggle-slider {
+  width: 40px;
+  height: 22px;
+  background: #ccc;
+  border-radius: 11px;
+  position: relative;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-slider::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.toggle-label input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+}
+
+.toggle-label input:checked + .toggle-slider::after {
+  transform: translateX(18px);
+}
+
+/* ===== Buttons ===== */
+.btn-secondary {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  background: #f0ece6;
+  border: 1px solid #e0dad0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #555;
+  transition: all 0.2s;
+  text-align: center;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background: #e6e0d6;
+  border-color: #d0c8bc;
+  color: #333;
+}
+
+.btn-secondary:active {
+  transform: scale(0.98);
+}
+
+/* ===== Stats ===== */
+.stats p {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  line-height: 1.8;
+}
+
+.stats span {
+  font-weight: 700;
+  color: #667eea;
+}
+
+/* ===== Footer ===== */
+.footer {
+  text-align: center;
+  padding-top: 4px;
+}
+
+.footer p {
+  font-size: 10px;
+  color: #ccc;
+  letter-spacing: 0.5px;
+}

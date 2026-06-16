@@ -1,0 +1,314 @@
+"""Crawler for modern Chinese poetry from shiku.org.
+
+shiku.org (中华诗库) is a large poetry archive with classical, modern,
+and world poetry. This crawler focuses on the modern Chinese poetry
+section at /shiku/xs/, which covers poets from early 20th century
+to contemporary.
+
+Structure of a poet page (GB2312 encoding):
+  - Navigation: <a href="#N">Title</a> (anchor links to each poem)
+  - Each poem: <a name="N"><h2>Title</h2></a> then <pre>poem text</pre>
+  - Poems separated by <hr>
+"""
+
+import re
+import time
+from pathlib import Path
+from urllib.parse import urljoin
+
+from bs4 import BeautifulSoup
+
+from .base_crawler import BaseCrawler
+
+
+class ShikuCrawler(BaseCrawler):
+    """Crawls shiku.org for modern Chinese poetry."""
+
+    BASE_URL = "https://shiku.org"
+    MODERN_POETRY_INDEX = "https://shiku.org/shiku/xs/index.htm"
+
+    # Known modern Chinese poets on shiku.org with their page filenames
+    # Ordered from earlier to more contemporary/modern
+    MODERN_POETS = [
+        # ===== 早期白话诗人 (Early Vernacular) =====
+        ("胡适", "hushi.htm"),
+        ("鲁迅", "luxun.htm"),
+        ("周作人", "zhouzuoren.htm"),
+        ("刘半农", "liubannong.htm"),
+        ("沈尹默", "shenyinmo.htm"),
+        ("郭沫若", "guomoruo.htm"),
+        ("徐志摩", "xuzhimo.htm"),
+        ("闻一多", "wenyiduo.htm"),
+        ("朱自清", "zhuziqing.htm"),
+        ("冰心", "bingxin.htm"),
+        ("宗白华", "zongbaihua.htm"),
+        ("王统照", "wangtongzhao.htm"),
+        ("汪静之", "wangjingzhi.htm"),
+        ("冯至", "fengzhi.htm"),
+        ("林徽因", "linhuiyin.htm"),
+        ("戴望舒", "daiwangshu.htm"),
+        ("卞之琳", "bianzhilin.htm"),
+        ("李金发", "lijinfa.htm"),
+        ("穆木天", "mumutian.htm"),
+        ("冯文炳", "fengwenbing.htm"),
+        ("梁宗岱", "liangzongdai.htm"),
+        ("孙大雨", "sundayu.htm"),
+        ("李广田", "liguangtian.htm"),
+        ("柯仲平", "hezhisan.htm"),
+        ("臧克家", "zangkejia.htm"),
+
+        # ===== 现代诗人 (Modern) =====
+        ("艾青", "aiqing.htm"),
+        ("田间", "tianjian.htm"),
+        ("何其芳", "heqifang.htm"),
+        ("废名", "feiming.htm"),
+        ("林庚", "lingeng.htm"),
+        ("辛笛", "xindi.htm"),
+        ("陈敬容", "chenjingrong.htm"),
+        ("杜运燮", "duyunxie.htm"),
+        ("穆旦", "mudan.htm"),
+        ("郑敏", "zhengmin.htm"),
+        ("袁可嘉", "yuankejia.htm"),
+        ("牛汉", "niuhan.htm"),
+        ("曾卓", "zengzhuo.htm"),
+        ("绿原", "lvyuan.htm"),
+        ("余光中", "yuguangzhong.htm"),
+        ("洛夫", "luofu.htm"),
+        ("痖弦", "yaxian.htm"),
+        ("郑愁予", "zhengchouyu.htm"),
+        ("杨牧", "yangmu.htm"),
+        ("周梦蝶", "zhoumengdie.htm"),
+        ("商禽", "shangqin.htm"),
+        ("罗门", "luomen.htm"),
+        ("蓉子", "rongzi.htm"),
+
+        # ===== 朦胧派及之后 (Misty Poets & Contemporary) =====
+        ("北岛", "beidao.htm"),
+        ("舒婷", "shuting.htm"),
+        ("顾城", "gucheng.htm"),
+        ("多多", "duoduo.htm"),
+        ("芒克", "mangke.htm"),
+        ("食指", "shizhi.htm"),
+        ("梁小斌", "liangxiaobin.htm"),
+        ("王小妮", "wangxiaoni.htm"),
+        ("徐敬亚", "xujingya.htm"),
+        ("严力", "yanli.htm"),
+        ("韩东", "handong.htm"),
+        ("于坚", "yujian.htm"),
+        ("西川", "xichuan.htm"),
+        ("海子", "haizi.htm"),
+        ("骆一禾", "luoyihe.htm"),
+        ("张枣", "zhangzao.htm"),
+        ("欧阳江河", "ouyangjianghe.htm"),
+        ("翟永明", "zhaiyongming.htm"),
+        ("王家新", "wangjiaxing.htm"),
+        ("陈东东", "chendongdong.htm"),
+        ("柏桦", "baihua.htm"),
+        ("吕德安", "lvdean.htm"),
+        ("孙文波", "sunwenbo.htm"),
+        ("肖开愚", "xiaokaiyu.htm"),
+        ("黄灿然", "huangcanran.htm"),
+        ("臧棣", "zangdi.htm"),
+        ("伊沙", "yisha.htm"),
+        ("徐江", "xujiang2.htm"),
+        ("侯马", "houma.htm"),
+        ("秦巴子", "qinbazi.htm"),
+    ]
+
+    def __init__(self, delay=2.0, jitter=0.5, user_agent=None):
+        super().__init__(delay, jitter, user_agent)
+        self.rp = None  # Skip robots.txt check for shiku.org
+        self.session.headers.update({
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+        })
+
+    def decode_gb2312(self, content: bytes) -> str:
+        """Decode content as GB2312 (shiku.org encoding)."""
+        try:
+            return content.decode("gb2312")
+        except UnicodeDecodeError:
+            return content.decode("gb2312", errors="replace")
+
+    def fetch_page(self, url: str) -> str | None:
+        """Fetch a page from shiku.org, return decoded text."""
+        self.rate_limit()
+        try:
+            resp = self.session.get(url, timeout=15)
+            resp.raise_for_status()
+            self.last_request_time = time.time()
+            return self.decode_gb2312(resp.content)
+        except Exception as e:
+            print(f"[ERROR] Failed to fetch {url}: {e}")
+            return None
+
+    def parse_poems_from_page(self, html: str, poet_name: str, source_url: str) -> list[dict]:
+        """Extract poems from a poet's page on shiku.org.
+
+        These pages are generated by Microsoft FrontPage 4.0. The format is:
+          <p align="center"><a name="N"></a><h2>Title</h2></p>
+          <p>line1<br />line2<br />...</p>
+          <p>line1<br />line2<br />...</p>
+          <hr />
+
+        No <pre> tags — just <p> blocks with <br> line breaks, separated by <hr>.
+        """
+        poems: list[dict] = []
+        soup = BeautifulSoup(html, "lxml")
+
+        # These pages are generated by Microsoft FrontPage 4.0.
+        # Format: <a name="N"></a><h2>Title</h2> followed by <p> blocks with <br> line breaks
+        import re as re_mod
+        # Pattern: <a name="NUMBER"></a><h2>TITLE</h2>
+        poem_starts = list(re_mod.finditer(r'<a\s+name="(\d+)">\s*</a>\s*<h2>(.*?)</h2>', html, re_mod.IGNORECASE | re_mod.DOTALL))
+
+        for match in poem_starts:
+            anchor_name = match.group(1)
+            title = match.group(2).strip()
+            if not title:
+                continue
+
+            # Find the poem content: all <p> blocks until the next <hr> or next poem anchor
+            start_pos = match.end()
+            end_pos = len(html)
+
+            # Look for next <hr> after this poem's title
+            next_hr = html.find("<hr", start_pos)
+            if next_hr > 0:
+                end_pos = next_hr
+
+            # Also check if there's another poem anchor that comes before the <hr>
+            # (to handle cases where <hr> might be missing)
+            next_anchor = html.find('<a name="', start_pos)
+            if 0 < next_anchor < end_pos:
+                # Only use the next anchor as boundary if we also see <hr> nearby or it's clearly the next poem
+                hr_before_anchor = html.rfind("<hr", start_pos, next_anchor)
+                if hr_before_anchor <= start_pos:
+                    end_pos = next_anchor
+
+            # Extract the poem content region
+            poem_html = html[start_pos:end_pos]
+
+            # Parse <p> blocks in the poem region to extract lines
+            poem_soup = BeautifulSoup(poem_html, "lxml")
+            lines: list[str] = []
+            for p_tag in poem_soup.find_all("p"):
+                # Get text, preserving <br> as line breaks
+                p_text = p_tag.get_text("\n", strip=True)
+                if not p_text.strip():
+                    continue
+                # Split by newline (from <br>) and clean
+                for line in p_text.split("\n"):
+                    line = line.strip()
+                    if line:
+                        lines.append(line)
+
+            if len(lines) < 2:
+                # Fallback: try to get text directly from the HTML region
+                raw_text = BeautifulSoup(poem_html, "lxml").get_text("\n")
+                lines = [l.strip() for l in raw_text.split("\n") if l.strip()]
+                # Filter out navigation links and other non-poem text
+                lines = [l for l in lines if len(l) < 100 and not any(
+                    kw in l for kw in ["上一页", "下一页", "返回", "首页", "目录"])]
+
+            if len(lines) < 2:
+                continue
+
+            poems.append({
+                "title": title,
+                "author": poet_name,
+                "lines": lines,
+                "source": source_url + "#" + anchor_name,
+            })
+
+        return poems
+
+    def get_poems_by_poet(self, poet_name: str, page_file: str) -> list[dict]:
+        """Fetch all poems for a given poet from shiku.org.
+
+        Args:
+            poet_name: The poet's display name (e.g., '北岛')
+            page_file: The page filename (e.g., 'beidao.htm')
+
+        Returns:
+            List of poem dicts with keys: title, author, lines[], source.
+        """
+        url = urljoin(self.BASE_URL, f"shiku/xs/{page_file}")
+        html = self.fetch_page(url)
+        if not html:
+            print(f"[SKIP] Could not fetch page for {poet_name}")
+            return []
+
+        poems = self.parse_poems_from_page(html, poet_name, url)
+        if poems:
+            print(f"[OK]    {len(poems)} poems from {poet_name}")
+        else:
+            print(f"[WARN]  No poems found for {poet_name}")
+        return poems
+
+    def crawl_all_poets(self, max_poets: int | None = None) -> list[dict]:
+        """Crawl all configured modern poets from shiku.org.
+
+        Args:
+            max_poets: Optional limit on number of poets to crawl.
+
+        Returns:
+            List of all poem dicts collected.
+        """
+        all_poems: list[dict] = []
+        poets = self.MODERN_POETS[:max_poets] if max_poets else self.MODERN_POETS
+
+        for i, (name, page_file) in enumerate(poets, 1):
+            print(f"\n[{i}/{len(poets)}] shiku.org: {name}")
+            try:
+                poems = self.get_poems_by_poet(name, page_file)
+                all_poems.extend(poems)
+            except Exception as e:
+                print(f"  [ERROR] {name}: {e}")
+                continue
+
+            # Be gentle — shiku.org is a personal site
+            self.rate_limit()
+
+            # Progress indicator
+            if i % 20 == 0:
+                print(f"  ... {len(all_poems)} poems collected so far")
+
+        # Deduplicate by (title, author)
+        seen = set()
+        unique = []
+        for p in all_poems:
+            key = (p["title"], p["author"])
+            if key not in seen:
+                seen.add(key)
+                unique.append(p)
+
+        print(f"\n=== Shiku crawl complete: {len(unique)} unique poems from {len(poets)} poets ===")
+        return unique
+
+
+# ------------------------------------------------------------------
+# Quick test
+# ------------------------------------------------------------------
+if __name__ == "__main__":
+    import sys, io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+
+    crawler = ShikuCrawler(delay=1.0, jitter=0.3)
+
+    # Test: get poems for 北岛
+    print("=== 北岛 (Beidao) ===")
+    poems = crawler.get_poems_by_poet("北岛", "beidao.htm")
+    for p in poems[:5]:
+        print(f"  {p['title']} ({len(p['lines'])} lines)")
+        for line in p['lines'][:3]:
+            print(f"    {line}")
+        if len(p['lines']) > 3:
+            print("    ...")
+    print(f"\nTotal: {len(poems)} poems")
+
+    # Also test a modern poet
+    if len(sys.argv) > 1 and sys.argv[1] == "--all":
+        print("\n=== Crawling all poets (limited to 5 for test) ===")
+        all_p = crawler.crawl_all_poets(max_poets=5)
+        print(f"\nTotal: {len(all_p)} poems from 5 poets")

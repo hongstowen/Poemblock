@@ -1,0 +1,21 @@
+/* styles.css — 宿主容器样式（宿主层，Shadow DOM 外）
+   诗歌内容的所有样式已在 content.js 的 Shadow DOM 中隔离注入。
+   此文件仅保留宿主层适配样式。 */
+
+/* 防止内容闪烁 */
+[data-poem-processed="true"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .poemblock-container,
+  .poemblock-container *,
+  .poemblock-container::before,
+  .poemblock-container::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
